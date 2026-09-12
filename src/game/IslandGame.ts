@@ -724,8 +724,7 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
 
   // ── 村落布局 ──
   makeHouse(-7.5, -5, 0.5, 0xf2e3c6, 0xd95f43) // 红顶小屋
-  makeHouse(7, -8, -0.7, 0xe8f0d8, 0x4a7d5d)   // 绿顶小屋
-  makeTableSet(1.5, -6.5, 0.3)                  // 两屋之间的野餐桌
+  makeTableSet(1.5, -6.5, 0.3)                  // 野餐桌
   makeCampfire(-1, 6.5)
   makeDock(0, 22, Math.PI)                      // 南边码头伸向大海
   makeLantern(-4.2, -2)
