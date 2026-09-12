@@ -1,12 +1,12 @@
-// 环境音：海浪涌动 + 远处风 / 空气感
-// 全部用白噪音实时合成（过滤 + 慢速起伏），不需要任何音频文件
+// 环境音：宁静的海浪 + 远处微风，全部用白噪音实时合成，不需要音频文件
+// 默认静音，首次手动开启后一直播放
 
 export interface AmbientAudioHandle {
-  setMuted: (muted: boolean) => void
+  setEnabled: (enabled: boolean) => void
   dispose: () => void
 }
 
-const MASTER_LEVEL = 0.85
+const MASTER_LEVEL = 0.8
 
 export function createAmbientAudio(): AmbientAudioHandle {
   const ctx = new AudioContext()
@@ -25,6 +25,7 @@ export function createAmbientAudio(): AmbientAudioHandle {
   const running: { src: AudioBufferSourceNode; oscs: OscillatorNode[] }[] = []
 
   // 一层「过滤白噪音 + 慢速音量起伏」，lfoRate/lfoDepth 控制涌动节奏
+  // 所有能量都压在 500Hz 以下，只有低缓的轰鸣感，没有沙沙的高频噪声
   function addLayer(
     type: BiquadFilterType,
     freq: number,
@@ -46,7 +47,7 @@ export function createAmbientAudio(): AmbientAudioHandle {
     const g = ctx.createGain()
     g.gain.value = gainValue
 
-    // 慢速 LFO 让音量起伏，像一波波涌来的浪 / 一阵阵的风
+    // 慢速 LFO 让音量像潮汐一样缓缓起伏
     const lfo = ctx.createOscillator()
     lfo.frequency.value = lfoRate
     const lfoGain = ctx.createGain()
@@ -60,11 +61,11 @@ export function createAmbientAudio(): AmbientAudioHandle {
 
     const oscs = [lfo]
     if (freqWobble > 0) {
-      // 滤波频率缓慢摆动，风声会有忽远忽近的飘荡感
+      // 滤波频率极缓摆动，风声有忽远忽近的飘荡感
       const wob = ctx.createOscillator()
       wob.frequency.value = freqWobble
       const wobGain = ctx.createGain()
-      wobGain.gain.value = freq * 0.25
+      wobGain.gain.value = freq * 0.2
       wob.connect(wobGain)
       wobGain.connect(filt.frequency)
       oscs.push(wob)
@@ -75,40 +76,36 @@ export function createAmbientAudio(): AmbientAudioHandle {
     running.push({ src, oscs })
   }
 
-  // 海浪主体：低沉涌浪，约 12 秒一个涌动周期
-  addLayer('lowpass', 260, 0.6, 0.42, 0.085, 0.26)
-  // 浪花嘶声：薄薄的高频，起伏更快
-  addLayer('bandpass', 1600, 0.8, 0.06, 0.21, 0.035)
-  // 远处的风 / 空气感：中空滤波 + 频率飘荡
-  addLayer('bandpass', 520, 0.4, 0.12, 0.05, 0.06, 0.033)
+  // 海浪主体：低通到 200Hz 的闷响，约 20 秒一次缓慢涌动
+  addLayer('lowpass', 200, 0.5, 0.4, 0.05, 0.24)
+  // 远处的微风：窄带低鸣，约 50 秒一个阵风来回
+  addLayer('bandpass', 320, 0.6, 0.09, 0.02, 0.045, 0.02)
 
-  // 浏览器禁止自动发声：等第一次点击/按键后再淡入，之后一直播放
-  let started = false
-  let muted = false
-  const start = () => {
-    if (started) return
-    started = true
-    window.removeEventListener('pointerdown', start)
-    window.removeEventListener('keydown', start)
-    void ctx.resume().then(() => {
-      master.gain.setValueAtTime(0, ctx.currentTime)
-      master.gain.linearRampToValueAtTime(muted ? 0 : MASTER_LEVEL, ctx.currentTime + 3.5)
-    })
+  // 浏览器禁止自动发声：默认静音，开启后等第一次点击/按键再淡入，之后一直播放
+  let enabled = false
+
+  function applyGain() {
+    if (ctx.state === 'suspended') void ctx.resume()
+    const target = enabled ? MASTER_LEVEL : 0
+    master.gain.cancelScheduledValues(ctx.currentTime)
+    master.gain.setValueAtTime(master.gain.value, ctx.currentTime)
+    master.gain.linearRampToValueAtTime(target, ctx.currentTime + (enabled ? 4 : 0.5))
   }
-  window.addEventListener('pointerdown', start)
-  window.addEventListener('keydown', start)
+
+  const onFirstGesture = () => {
+    if (enabled) applyGain() // 播音状态下，首次手势触发淡入
+  }
+  window.addEventListener('pointerdown', onFirstGesture)
+  window.addEventListener('keydown', onFirstGesture)
 
   return {
-    setMuted(m: boolean) {
-      muted = m
-      if (!started) return
-      master.gain.cancelScheduledValues(ctx.currentTime)
-      master.gain.setValueAtTime(master.gain.value, ctx.currentTime)
-      master.gain.linearRampToValueAtTime(m ? 0 : MASTER_LEVEL, ctx.currentTime + 0.4)
+    setEnabled(on: boolean) {
+      enabled = on
+      applyGain() // 按钮点击本身就是一次用户手势，可以直接 resume
     },
     dispose() {
-      window.removeEventListener('pointerdown', start)
-      window.removeEventListener('keydown', start)
+      window.removeEventListener('pointerdown', onFirstGesture)
+      window.removeEventListener('keydown', onFirstGesture)
       master.gain.cancelScheduledValues(ctx.currentTime)
       master.gain.setValueAtTime(master.gain.value, ctx.currentTime)
       master.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3)

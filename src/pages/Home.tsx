@@ -7,7 +7,7 @@ import type { AmbientAudioHandle } from '../game/ambientAudio'
 export default function Home() {
   const ref = useRef<HTMLDivElement>(null)
   const audioRef = useRef<AmbientAudioHandle | null>(null)
-  const [muted, setMuted] = useState(false)
+  const [muted, setMuted] = useState(true) // 默认静音，点喇叭开启
 
   useEffect(() => {
     if (!ref.current) return
@@ -22,7 +22,7 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    audioRef.current?.setMuted(muted)
+    audioRef.current?.setEnabled(!muted)
   }, [muted])
 
   return (
