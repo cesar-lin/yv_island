@@ -539,22 +539,22 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.7, 6), woodDark)
     leg.position.y = 0.36
     g.add(leg)
-    // 桌上摆个果盘
+    // 桌上摆一盘黑巧克力（三颗深浅不一的巧克力球）
     const plate = new THREE.Mesh(
       new THREE.CylinderGeometry(0.28, 0.2, 0.07, 10),
       new THREE.MeshStandardMaterial({ color: 0xf5f0e6, flatShading: true })
     )
     plate.position.y = 0.81
     g.add(plate)
-    const fruitColors = [0xff5a4e, 0xffa62b, 0x8fd14f]
+    const chocoColors = [0x2e1a10, 0x3b2317, 0x271409]
     for (let i = 0; i < 3; i++) {
-      const fruit = new THREE.Mesh(
+      const choco = new THREE.Mesh(
         new THREE.SphereGeometry(0.09, 8, 6),
-        new THREE.MeshStandardMaterial({ color: fruitColors[i], flatShading: true })
+        new THREE.MeshStandardMaterial({ color: chocoColors[i], roughness: 0.25, metalness: 0.05 })
       )
       const a = (i / 3) * Math.PI * 2
-      fruit.position.set(Math.cos(a) * 0.12, 0.9, Math.sin(a) * 0.12)
-      g.add(fruit)
+      choco.position.set(Math.cos(a) * 0.12, 0.9, Math.sin(a) * 0.12)
+      g.add(choco)
     }
     // 三条凳子
     for (let i = 0; i < 3; i++) {
@@ -723,8 +723,10 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
   }
 
   // ── 村落布局 ──
+  const TABLE_X = 1.5
+  const TABLE_Z = -6.5
   makeHouse(-7.5, -5, 0.5, 0xf2e3c6, 0xd95f43) // 红顶小屋
-  makeTableSet(1.5, -6.5, 0.3)                  // 野餐桌
+  makeTableSet(TABLE_X, TABLE_Z, 0.3)          // 野餐桌
   makeCampfire(-1, 6.5)
   makeDock(0, 22, Math.PI)                      // 南边码头伸向大海
   makeLantern(-4.2, -2)
@@ -920,6 +922,16 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     joyBase.addEventListener('pointerup', joyEnd)
     joyBase.addEventListener('pointercancel', joyEnd)
   }
+
+  // 黑巧克力提示标签：妈妈鸭靠近野餐桌时显示
+  const tip = document.createElement('div')
+  tip.textContent = '黑巧克力'
+  tip.style.cssText =
+    'position:absolute;transform:translate(-50%,-100%);padding:4px 10px;border-radius:10px;' +
+    'background:rgba(0,0,0,0.45);color:#fff;font-size:12px;white-space:nowrap;' +
+    'pointer-events:none;opacity:0;transition:opacity 0.3s;z-index:10;'
+  container.appendChild(tip)
+  const tipPos = new THREE.Vector3()
 
   // ---------- 日夜 & 天气常量 ----------
   const DAY_LENGTH = 120 // 一昼夜 120 秒
@@ -1243,6 +1255,17 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     camera.position.lerp(new THREE.Vector3(cx, Math.max(cy, 1.5), cz), Math.min(dt * 5, 1))
     camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z)
 
+    // ===== 靠近野餐桌时提示黑巧克力 =====
+    const tdist = Math.hypot(player.position.x - TABLE_X, player.position.z - TABLE_Z)
+    if (tdist < 3) {
+      tip.style.opacity = '1'
+      tipPos.set(TABLE_X, terrainHeight(TABLE_X, TABLE_Z) + 1.6, TABLE_Z).project(camera)
+      tip.style.left = `${(tipPos.x * 0.5 + 0.5) * container.clientWidth}px`
+      tip.style.top = `${(-tipPos.y * 0.5 + 0.5) * container.clientHeight}px`
+    } else {
+      tip.style.opacity = '0'
+    }
+
     // ===== 海面波浪：近岸碎波 + 绕岛涌来的长浪（下雨时浪更大）=====
     const waveAmp = 1 + rainStrength * 1.2
     for (let i = 0; i < waterPos.count; i++) {
@@ -1286,6 +1309,7 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
       renderer.domElement.removeEventListener('pointerdown', onDown)
       renderer.dispose()
       if (joyBase && joyBase.parentElement === container) container.removeChild(joyBase)
+      if (tip.parentElement === container) container.removeChild(tip)
       container.removeChild(renderer.domElement)
     },
   }
