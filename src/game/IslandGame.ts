@@ -827,10 +827,12 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
   scene.add(baby.group)
   const babyState = { phase: 0 }
 
-  // 小绵羊（在草地上悠闲散步，走累了低头吃草）
-  const sheep = makeSheep()
-  sheep.group.position.set(-8, terrainHeight(-8, 8), 8)
-  scene.add(sheep.group)
+  // 小绵羊（一半概率来岛上做客，在草地上悠闲散步，走累了低头吃草）
+  const sheep = Math.random() < 0.5 ? makeSheep() : null
+  if (sheep) {
+    sheep.group.position.set(-8, terrainHeight(-8, 8), 8)
+    scene.add(sheep.group)
+  }
   const sheepState = { tx: -8, tz: 8, wait: 1, phase: 0, moving: false, graze: 0 }
 
   // ---------- 输入 ----------
@@ -1166,54 +1168,56 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     waddle(dad, dadState.phase, dadState.moving, t + 1)
 
     // ===== 小绵羊：草地散步，停下吃草 =====
-    if (sheepState.wait > 0) {
-      sheepState.wait -= dt
-      sheepState.moving = false
-      // 歇着的时候低头吃草
-      sheepState.graze = Math.min(sheepState.graze + dt * 2, 1)
-    } else {
-      const sdx = sheepState.tx - sheep.group.position.x
-      const sdz = sheepState.tz - sheep.group.position.z
-      const sdist = Math.hypot(sdx, sdz)
-      if (sdist < 0.3) {
-        // 到了，吃一会儿草再选下一个目的地（只在草地上挑）
-        sheepState.wait = rand(3, 8)
-        for (let i = 0; i < 10; i++) {
-          const a = Math.random() * Math.PI * 2
-          const r = rand(4, 17)
-          const gx = Math.cos(a) * r
-          const gz = Math.sin(a) * r
-          if (terrainHeight(gx, gz) > 0.35) {
-            sheepState.tx = gx
-            sheepState.tz = gz
-            break
-          }
-        }
+    if (sheep) {
+      if (sheepState.wait > 0) {
+        sheepState.wait -= dt
         sheepState.moving = false
+        // 歇着的时候低头吃草
+        sheepState.graze = Math.min(sheepState.graze + dt * 2, 1)
       } else {
-        sheepState.moving = true
-        sheepState.graze = Math.max(sheepState.graze - dt * 3, 0)
-        const sp = 1.6
-        sheep.group.position.x += (sdx / sdist) * sp * dt
-        sheep.group.position.z += (sdz / sdist) * sp * dt
-        faceToward(sheep.group, sdx, sdz, dt, 5)
-        sheepState.phase += dt * 6
+        const sdx = sheepState.tx - sheep.group.position.x
+        const sdz = sheepState.tz - sheep.group.position.z
+        const sdist = Math.hypot(sdx, sdz)
+        if (sdist < 0.3) {
+          // 到了，吃一会儿草再选下一个目的地（只在草地上挑）
+          sheepState.wait = rand(3, 8)
+          for (let i = 0; i < 10; i++) {
+            const a = Math.random() * Math.PI * 2
+            const r = rand(4, 17)
+            const gx = Math.cos(a) * r
+            const gz = Math.sin(a) * r
+            if (terrainHeight(gx, gz) > 0.35) {
+              sheepState.tx = gx
+              sheepState.tz = gz
+              break
+            }
+          }
+          sheepState.moving = false
+        } else {
+          sheepState.moving = true
+          sheepState.graze = Math.max(sheepState.graze - dt * 3, 0)
+          const sp = 1.6
+          sheep.group.position.x += (sdx / sdist) * sp * dt
+          sheep.group.position.z += (sdz / sdist) * sp * dt
+          faceToward(sheep.group, sdx, sdz, dt, 5)
+          sheepState.phase += dt * 6
+        }
       }
+      sheep.group.position.y = terrainHeight(sheep.group.position.x, sheep.group.position.z)
+      // 对角小跑：左后+右前一条腿，左前+右后一条腿交替摆动
+      const legSwing = sheepState.moving ? Math.sin(sheepState.phase) * 0.5 : 0
+      sheep.legs[0].rotation.x = legSwing
+      sheep.legs[1].rotation.x = -legSwing
+      sheep.legs[2].rotation.x = -legSwing
+      sheep.legs[3].rotation.x = legSwing
+      if (sheepState.moving) {
+        // 走路时身体轻微起伏
+        sheep.group.position.y += Math.abs(Math.sin(sheepState.phase)) * 0.03
+      }
+      // 吃草低头 / 抬头恢复
+      sheep.head.rotation.x = sheepState.graze * 0.9
+      sheep.head.position.y = 0.84 - sheepState.graze * 0.18
     }
-    sheep.group.position.y = terrainHeight(sheep.group.position.x, sheep.group.position.z)
-    // 对角小跑：左后+右前一条腿，左前+右后一条腿交替摆动
-    const legSwing = sheepState.moving ? Math.sin(sheepState.phase) * 0.5 : 0
-    sheep.legs[0].rotation.x = legSwing
-    sheep.legs[1].rotation.x = -legSwing
-    sheep.legs[2].rotation.x = -legSwing
-    sheep.legs[3].rotation.x = legSwing
-    if (sheepState.moving) {
-      // 走路时身体轻微起伏
-      sheep.group.position.y += Math.abs(Math.sin(sheepState.phase)) * 0.03
-    }
-    // 吃草低头 / 抬头恢复
-    sheep.head.rotation.x = sheepState.graze * 0.9
-    sheep.head.position.y = 0.84 - sheepState.graze * 0.18
 
     // ===== 鸭宝宝：跟着妈妈 =====
     const bdx = player.position.x - baby.group.position.x
