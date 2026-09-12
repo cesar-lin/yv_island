@@ -2,7 +2,7 @@ import * as THREE from 'three'
 
 // ─────────────────────────────────────────────────────────────
 // 3D 小岛漫步 · 小黄鸭一家
-// 妈妈鸭（玩家）+ 爸爸鸭 + 鸭宝宝，日夜交替 + 天气系统
+// 妈妈鸭（玩家）+ 爸爸鸭 + 鸭宝宝 + 小绵羊，日夜交替 + 天气系统
 // ─────────────────────────────────────────────────────────────
 
 export interface IslandGameHandle {
@@ -154,6 +154,102 @@ function makeDuck(scale: number, accessory: 'bow' | 'hat' | 'none'): DuckParts {
 
   g.scale.setScalar(scale)
   return { group: g, wingL, wingR, head }
+}
+
+// ── 小绵羊工厂 ──────────────────────────────────────────────
+interface SheepParts {
+  group: THREE.Group
+  head: THREE.Group // 头部单独成组，吃草时低下去
+  legs: THREE.Group[] // 四条腿，走路时交替摆动
+}
+
+// 把几何体顶点沿径向顶出/压入，做出毛茸茸的轮廓
+function fluffGeometry(geo: THREE.BufferGeometry, amt: number) {
+  const p = geo.attributes.position
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i)
+    const y = p.getY(i)
+    const z = p.getZ(i)
+    const n =
+      Math.sin(x * 9.1 + 1.3) * Math.sin(y * 8.3) * Math.sin(z * 9.7 + 0.6) +
+      0.45 * Math.sin(x * 17.3 + 0.4) * Math.sin(y * 15.1 + 2.2) * Math.sin(z * 16.9 + 1.1)
+    const k = 1 + (n / 1.45) * amt
+    p.setXYZ(i, x * k, y * k, z * k)
+  }
+  geo.computeVertexNormals()
+  return geo
+}
+
+function makeSheep(): SheepParts {
+  const g = new THREE.Group()
+  const woolMat = new THREE.MeshStandardMaterial({
+    color: 0xfaf6ec,
+    roughness: 0.95,
+    flatShading: true,
+  })
+  const faceMat = new THREE.MeshStandardMaterial({ color: 0x4a423c, roughness: 0.6 })
+
+  // 身体：毛球轮廓 + 表面顶点抖动 = 一整团蓬松羊毛
+  const bodyGeo = fluffGeometry(new THREE.SphereGeometry(0.5, 26, 20), 0.09)
+  bodyGeo.scale(1.05, 0.92, 1.25)
+  const body = new THREE.Mesh(bodyGeo, woolMat)
+  body.position.y = 0.62
+  body.castShadow = true
+  g.add(body)
+
+  // 头：深色小脸明显探出毛团，头顶盖一圈蓬松的白毛
+  const head = new THREE.Group()
+  head.position.set(0, 0.84, 0.72)
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 12), faceMat)
+  face.scale.set(0.88, 0.95, 1.05)
+  face.position.z = 0.05
+  face.castShadow = true
+  head.add(face)
+  const capGeo = fluffGeometry(new THREE.SphereGeometry(0.26, 14, 10), 0.1)
+  capGeo.scale(1, 0.72, 1)
+  const cap = new THREE.Mesh(capGeo, woolMat)
+  cap.position.set(0, 0.17, -0.1)
+  cap.castShadow = true
+  head.add(cap)
+  // 眼睛
+  const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.15 })
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), eyeMat)
+    eye.position.set(s * 0.12, 0.05, 0.24)
+    head.add(eye)
+  }
+  // 小耳朵：向两边翘起
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), faceMat)
+    ear.scale.set(1.5, 0.55, 0.6)
+    ear.position.set(s * 0.26, 0.12, -0.04)
+    ear.rotation.z = s * -0.85
+    head.add(ear)
+  }
+  g.add(head)
+
+  // 四条小细腿（髋部成组，摆动时绕髋部旋转）
+  const legs: THREE.Group[] = []
+  const legGeo = new THREE.CylinderGeometry(0.05, 0.045, 0.42, 6)
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const hip = new THREE.Group()
+      hip.position.set(sx * 0.22, 0.42, sz * 0.32)
+      const leg = new THREE.Mesh(legGeo, faceMat)
+      leg.position.y = -0.21
+      leg.castShadow = true
+      hip.add(leg)
+      g.add(hip)
+      legs.push(hip)
+    }
+  }
+
+  // 小卷毛尾巴
+  const tail = new THREE.Mesh(fluffGeometry(new THREE.IcosahedronGeometry(0.12, 1), 0.12), woolMat)
+  tail.position.set(0, 0.72, -0.68)
+  g.add(tail)
+
+  return { group: g, head, legs }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -731,6 +827,12 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
   scene.add(baby.group)
   const babyState = { phase: 0 }
 
+  // 小绵羊（在草地上悠闲散步，走累了低头吃草）
+  const sheep = makeSheep()
+  sheep.group.position.set(-8, terrainHeight(-8, 8), 8)
+  scene.add(sheep.group)
+  const sheepState = { tx: -8, tz: 8, wait: 1, phase: 0, moving: false, graze: 0 }
+
   // ---------- 输入 ----------
   const keys = new Set<string>()
   const onKeyDown = (e: KeyboardEvent) => {
@@ -1062,6 +1164,56 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     }
     dad.group.position.y = terrainHeight(dad.group.position.x, dad.group.position.z)
     waddle(dad, dadState.phase, dadState.moving, t + 1)
+
+    // ===== 小绵羊：草地散步，停下吃草 =====
+    if (sheepState.wait > 0) {
+      sheepState.wait -= dt
+      sheepState.moving = false
+      // 歇着的时候低头吃草
+      sheepState.graze = Math.min(sheepState.graze + dt * 2, 1)
+    } else {
+      const sdx = sheepState.tx - sheep.group.position.x
+      const sdz = sheepState.tz - sheep.group.position.z
+      const sdist = Math.hypot(sdx, sdz)
+      if (sdist < 0.3) {
+        // 到了，吃一会儿草再选下一个目的地（只在草地上挑）
+        sheepState.wait = rand(3, 8)
+        for (let i = 0; i < 10; i++) {
+          const a = Math.random() * Math.PI * 2
+          const r = rand(4, 17)
+          const gx = Math.cos(a) * r
+          const gz = Math.sin(a) * r
+          if (terrainHeight(gx, gz) > 0.35) {
+            sheepState.tx = gx
+            sheepState.tz = gz
+            break
+          }
+        }
+        sheepState.moving = false
+      } else {
+        sheepState.moving = true
+        sheepState.graze = Math.max(sheepState.graze - dt * 3, 0)
+        const sp = 1.6
+        sheep.group.position.x += (sdx / sdist) * sp * dt
+        sheep.group.position.z += (sdz / sdist) * sp * dt
+        faceToward(sheep.group, sdx, sdz, dt, 5)
+        sheepState.phase += dt * 6
+      }
+    }
+    sheep.group.position.y = terrainHeight(sheep.group.position.x, sheep.group.position.z)
+    // 对角小跑：左后+右前一条腿，左前+右后一条腿交替摆动
+    const legSwing = sheepState.moving ? Math.sin(sheepState.phase) * 0.5 : 0
+    sheep.legs[0].rotation.x = legSwing
+    sheep.legs[1].rotation.x = -legSwing
+    sheep.legs[2].rotation.x = -legSwing
+    sheep.legs[3].rotation.x = legSwing
+    if (sheepState.moving) {
+      // 走路时身体轻微起伏
+      sheep.group.position.y += Math.abs(Math.sin(sheepState.phase)) * 0.03
+    }
+    // 吃草低头 / 抬头恢复
+    sheep.head.rotation.x = sheepState.graze * 0.9
+    sheep.head.position.y = 0.84 - sheepState.graze * 0.18
 
     // ===== 鸭宝宝：跟着妈妈 =====
     const bdx = player.position.x - baby.group.position.x
