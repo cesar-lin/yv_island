@@ -1,73 +1,43 @@
-# React + TypeScript + Vite
+# Yv 一家的小岛
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+3D 小岛漫步小游戏：妈妈鸭在岛上自由探索，爸爸鸭悠闲散步，鸭宝宝追着妈妈跑，小绵羊随机来岛上做客。
 
-Currently, two official plugins are available:
+**在线体验**：https://sakyalin.github.io/yv_island/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 玩法
 
-## React Compiler
+- **移动**：`WASD` / 方向键，或左下角虚拟摇杆（手机触屏可用）
+- **视角**：鼠标 / 手指拖拽环绕
+- 走到野餐桌旁，桌上有一盘黑巧克力
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 功能特性
 
-## Expanding the ESLint configuration
+- 日夜交替：日出日落、星空、晴朗夜晚的流星雨
+- 天气系统：晴 / 多云 / 下雨随机切换，雨夜篝火与路灯亮起
+- 小绵羊：每次打开网页约 50% 概率来岛上散步，走累了低头吃草
+- 环境音：粉噪音实时合成的海浪声，宁静低缓，默认静音（右上角喇叭开启）
+- 小岛生态：森林、棕榈滩、码头、木屋村落、花草岩石随机布局
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 技术栈
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- React 19 + TypeScript + Vite
+- Three.js 实时渲染（程序化生成所有模型，无外部资源文件）
+- Web Audio API 实时合成环境音（无音频文件）
+- Tailwind CSS + shadcn/ui
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 本地开发
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev        # 开发服务器 http://localhost:3000
+npm run build      # 类型检查 + 构建到 dist/
+npm run preview    # 本地预览构建产物
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 部署
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+推送到 `main` 分支后，GitHub Actions 自动构建并部署到 GitHub Pages（见 `.github/workflows/deploy.yml`），无需手动操作。
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## License
+
+[MIT](LICENSE)
