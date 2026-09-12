@@ -1243,15 +1243,19 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     camera.position.lerp(new THREE.Vector3(cx, Math.max(cy, 1.5), cz), Math.min(dt * 5, 1))
     camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z)
 
-    // ===== 海面波浪（下雨时浪更大）=====
+    // ===== 海面波浪：近岸碎波 + 绕岛涌来的长浪（下雨时浪更大）=====
     const waveAmp = 1 + rainStrength * 1.2
     for (let i = 0; i < waterPos.count; i++) {
       const x = waterBase[i * 3]
       const z = waterBase[i * 3 + 2]
-      waterPos.setY(
-        i,
-        (Math.sin(x * 0.25 + t * 1.4) * 0.18 + Math.cos(z * 0.22 + t) * 0.15) * waveAmp - 0.12
-      )
+      // 近岸细碎的小波浪
+      const chop =
+        (Math.sin(x * 0.25 + t * 1.4) * 0.18 + Math.cos(z * 0.22 + t) * 0.15) * waveAmp
+      // 远处涌来的长浪：一圈圈推向小岛，靠近岸边逐渐显现
+      const r = Math.hypot(x, z)
+      const swell =
+        Math.sin(r * 0.28 - t * 1.1) * 0.35 * Math.min(r / 25, 1) * (1 + rainStrength * 0.5)
+      waterPos.setY(i, chop + swell - 0.12)
     }
     waterPos.needsUpdate = true
     waterGeo.computeVertexNormals()

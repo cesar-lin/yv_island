@@ -1,14 +1,29 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Volume2, VolumeX } from 'lucide-react'
 import { createIslandGame } from '../game/IslandGame'
+import { createAmbientAudio } from '../game/ambientAudio'
+import type { AmbientAudioHandle } from '../game/ambientAudio'
 
 export default function Home() {
   const ref = useRef<HTMLDivElement>(null)
+  const audioRef = useRef<AmbientAudioHandle | null>(null)
+  const [muted, setMuted] = useState(false)
 
   useEffect(() => {
     if (!ref.current) return
     const game = createIslandGame(ref.current)
-    return () => game.dispose()
+    const audio = createAmbientAudio()
+    audioRef.current = audio
+    return () => {
+      game.dispose()
+      audio.dispose()
+      audioRef.current = null
+    }
   }, [])
+
+  useEffect(() => {
+    audioRef.current?.setMuted(muted)
+  }, [muted])
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-sky-300">
@@ -21,6 +36,15 @@ export default function Home() {
           日夜交替 · 晴雨不定 · 晴夜有流星雨 · 白羊随机拜访
         </p>
       </div>
+
+      {/* 环境音开关 */}
+      <button
+        onClick={() => setMuted((m) => !m)}
+        aria-label={muted ? '打开环境音' : '关闭环境音'}
+        className="absolute right-4 top-4 z-10 rounded-full bg-black/30 p-2.5 text-white backdrop-blur-md transition-colors hover:bg-black/45"
+      >
+        {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+      </button>
     </div>
   )
 }
