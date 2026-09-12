@@ -539,7 +539,7 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.7, 6), woodDark)
     leg.position.y = 0.36
     g.add(leg)
-    // 桌上摆一盘黑巧克力（三颗深浅不一的巧克力球）
+    // 桌上摆一盘黑巧克力（三块深浅不一的巧克力方块）
     const plate = new THREE.Mesh(
       new THREE.CylinderGeometry(0.28, 0.2, 0.07, 10),
       new THREE.MeshStandardMaterial({ color: 0xf5f0e6, flatShading: true })
@@ -549,11 +549,12 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     const chocoColors = [0x2e1a10, 0x3b2317, 0x271409]
     for (let i = 0; i < 3; i++) {
       const choco = new THREE.Mesh(
-        new THREE.SphereGeometry(0.09, 8, 6),
-        new THREE.MeshStandardMaterial({ color: chocoColors[i], roughness: 0.25, metalness: 0.05 })
+        new THREE.BoxGeometry(0.14, 0.14, 0.14),
+        new THREE.MeshStandardMaterial({ color: chocoColors[i], roughness: 0.3, metalness: 0.05, flatShading: true })
       )
       const a = (i / 3) * Math.PI * 2
-      choco.position.set(Math.cos(a) * 0.12, 0.9, Math.sin(a) * 0.12)
+      choco.position.set(Math.cos(a) * 0.12, 0.92, Math.sin(a) * 0.12)
+      choco.rotation.y = Math.random() * Math.PI
       g.add(choco)
     }
     // 三条凳子
