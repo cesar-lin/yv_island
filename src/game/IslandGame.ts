@@ -723,6 +723,91 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     scene.add(g)
   }
 
+  // 黑色三箱小轿车（车头 / 座舱 / 车尾三段式比例）
+  function makeCar(x: number, z: number, rotY: number) {
+    const g = new THREE.Group()
+    const paint = new THREE.MeshStandardMaterial({ color: 0x1c1d22, roughness: 0.2, metalness: 0.7 }) // 黑色车漆
+    const glass = new THREE.MeshStandardMaterial({ color: 0x3a4a5a, roughness: 0.12, metalness: 0.5 }) // 深色玻璃
+    const tyre = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.9 })
+    const hub = new THREE.MeshStandardMaterial({ color: 0xc9cdd2, roughness: 0.3, metalness: 0.8 })
+    const lightF = new THREE.MeshStandardMaterial({ color: 0xfff6d8, emissive: 0xfff0b0, emissiveIntensity: 0.35 })
+    const lightR = new THREE.MeshStandardMaterial({ color: 0xb02020, emissive: 0x8a1010, emissiveIntensity: 0.4 })
+
+    // 车身下沿（三箱轮廓的基座）
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.55, 1.75), paint)
+    body.position.y = 0.6
+    body.castShadow = true
+    g.add(body)
+
+    // 车头盖：前箱，微微下倾
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.16, 1.68), paint)
+    hood.position.set(1.5, 0.92, 0)
+    hood.rotation.z = -0.07
+    hood.castShadow = true
+    g.add(hood)
+
+    // 车尾箱盖：后箱，微微上翘
+    const trunkLid = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.14, 1.68), paint)
+    trunkLid.position.set(-1.62, 0.9, 0)
+    trunkLid.rotation.z = 0.06
+    g.add(trunkLid)
+
+    // 座舱：中箱，深色玻璃房 + 黑色车顶
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.46, 1.58), glass)
+    cabin.position.set(-0.18, 1.1, 0)
+    cabin.castShadow = true
+    g.add(cabin)
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.1, 1.62), paint)
+    roof.position.set(-0.18, 1.44, 0)
+    roof.castShadow = true
+    g.add(roof)
+
+    // 前后挡风玻璃斜面
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.05, 1.5), glass)
+    windshield.position.set(0.82, 1.26, 0)
+    windshield.rotation.z = 0.62
+    g.add(windshield)
+    const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.05, 1.5), glass)
+    rearGlass.position.set(-1.16, 1.22, 0)
+    rearGlass.rotation.z = -0.7
+    g.add(rearGlass)
+
+    // 车灯 + 后视镜
+    for (const s of [-1, 1]) {
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), lightF)
+      head.scale.set(1.4, 0.7, 1)
+      head.position.set(2.22, 0.72, s * 0.55)
+      g.add(head)
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.4), lightR)
+      tail.position.set(-2.22, 0.74, s * 0.55)
+      g.add(tail)
+      const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.08), paint)
+      mirror.position.set(0.75, 1.06, s * 0.86)
+      g.add(mirror)
+    }
+
+    // 车轮 + 轮毂
+    const wheelGeo = new THREE.CylinderGeometry(0.33, 0.33, 0.24, 14)
+    wheelGeo.rotateX(Math.PI / 2)
+    const hubGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.26, 10)
+    hubGeo.rotateX(Math.PI / 2)
+    for (const wx of [1.45, -1.45]) {
+      for (const s of [-1, 1]) {
+        const wheel = new THREE.Mesh(wheelGeo, tyre)
+        wheel.position.set(wx, 0.33, s * 0.86)
+        wheel.castShadow = true
+        g.add(wheel)
+        const cap = new THREE.Mesh(hubGeo, hub)
+        cap.position.set(wx, 0.33, s * 0.865)
+        g.add(cap)
+      }
+    }
+
+    g.position.set(x, terrainHeight(x, z) + 0.02, z)
+    g.rotation.y = rotY
+    scene.add(g)
+  }
+
   // ── 村落布局 ──
   const TABLE_X = 1.5
   const TABLE_Z = -6.5
@@ -740,6 +825,7 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
   makeCrate(8.6, -6.3, 1)
   makeCrate(8.2, -5.4, 0.75)
   makeCrate(-0.8, 21.4, 0.9) // 码头口放一个
+  makeCar(-3.2, -8.8, -0.9) // 红房子旁的黑色小轿车
   const flowerColors = [0xff6fa5, 0xffd166, 0xff8c69, 0xc490f0, 0xffffff]
   for (let i = 0; i < 22; i++) {
     const a = Math.random() * Math.PI * 2
@@ -755,7 +841,8 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     const r = rand(4, 17)
     const x = Math.cos(a) * r
     const z = Math.sin(a) * r
-    if (terrainHeight(x, z) > 0.3) makeTree(x, z)
+    // 树不压在车附近，免得穿模
+    if (terrainHeight(x, z) > 0.3 && Math.hypot(x + 3.2, z + 8.8) > 2.8) makeTree(x, z)
   }
   for (let i = 0; i < 10; i++) {
     const a = Math.random() * Math.PI * 2
