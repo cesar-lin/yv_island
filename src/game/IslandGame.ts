@@ -776,16 +776,6 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
       }
     }
 
-    // 前后挡风玻璃斜面（与座舱同色系玻璃）
-    const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.05, 1.44), glass)
-    windshield.position.set(0.86, 1.2, 0)
-    windshield.rotation.z = 0.65
-    g.add(windshield)
-    const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.05, 1.44), glass)
-    rearGlass.position.set(-1.2, 1.18, 0)
-    rearGlass.rotation.z = -0.72
-    g.add(rearGlass)
-
     // 车灯 + 后视镜
     for (const s of [-1, 1]) {
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), lightF)
