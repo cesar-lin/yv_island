@@ -23,7 +23,7 @@
 - React 19 + TypeScript + Vite
 - Three.js 实时渲染（程序化生成所有模型，无外部资源文件）
 - Web Audio API 实时合成环境音（无音频文件）
-- Tailwind CSS + shadcn/ui
+- Tailwind CSS
 
 ## 本地开发
 
