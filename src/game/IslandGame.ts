@@ -727,7 +727,7 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
   function makeCar(x: number, z: number, rotY: number) {
     const g = new THREE.Group()
     const paint = new THREE.MeshStandardMaterial({ color: 0x1c1d22, roughness: 0.2, metalness: 0.7 }) // 黑色车漆
-    const glass = new THREE.MeshStandardMaterial({ color: 0x3a4a5a, roughness: 0.12, metalness: 0.5 }) // 深色玻璃
+    const glass = new THREE.MeshStandardMaterial({ color: 0x5a6e80, roughness: 0.08, metalness: 0.3 }) // 玻璃
     const tyre = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.9 })
     const hub = new THREE.MeshStandardMaterial({ color: 0xc9cdd2, roughness: 0.3, metalness: 0.8 })
     const lightF = new THREE.MeshStandardMaterial({ color: 0xfff6d8, emissive: 0xfff0b0, emissiveIntensity: 0.35 })
@@ -752,24 +752,38 @@ export function createIslandGame(container: HTMLElement): IslandGameHandle {
     trunkLid.rotation.z = 0.06
     g.add(trunkLid)
 
-    // 座舱：中箱，深色玻璃房 + 黑色车顶
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.46, 1.58), glass)
+    // 座舱：中箱，整圈玻璃房
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.44, 1.5), glass)
     cabin.position.set(-0.18, 1.1, 0)
     cabin.castShadow = true
     g.add(cabin)
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.1, 1.62), paint)
-    roof.position.set(-0.18, 1.44, 0)
+
+    // 黑色车顶，略外挑
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.82, 0.09, 1.56), paint)
+    roof.position.set(-0.18, 1.37, 0)
     roof.castShadow = true
     g.add(roof)
 
-    // 前后挡风玻璃斜面
-    const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.05, 1.5), glass)
-    windshield.position.set(0.82, 1.26, 0)
-    windshield.rotation.z = 0.62
+    // 黑色腰线（玻璃下沿）和 B/C 立柱，把侧面分出车窗
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.09, 1.52), paint)
+    belt.position.set(-0.18, 0.9, 0)
+    g.add(belt)
+    for (const s of [-1, 1]) {
+      for (const px of [-0.72, 0.14]) {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.42, 0.05), paint)
+        pillar.position.set(px, 1.1, s * 0.755)
+        g.add(pillar)
+      }
+    }
+
+    // 前后挡风玻璃斜面（与座舱同色系玻璃）
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.05, 1.44), glass)
+    windshield.position.set(0.86, 1.2, 0)
+    windshield.rotation.z = 0.65
     g.add(windshield)
-    const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.05, 1.5), glass)
-    rearGlass.position.set(-1.16, 1.22, 0)
-    rearGlass.rotation.z = -0.7
+    const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.05, 1.44), glass)
+    rearGlass.position.set(-1.2, 1.18, 0)
+    rearGlass.rotation.z = -0.72
     g.add(rearGlass)
 
     // 车灯 + 后视镜
